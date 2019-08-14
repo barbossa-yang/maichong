@@ -503,10 +503,10 @@ void TIM1_CC_IRQHandler(void)
 *******************************************************************************/
 void TIM2_IRQHandler(void)
 {
-//    highvolage_adjust(voltage_target);
-    timer_timeout++;
-//    GPIO_WriteBit(GPIOB, GPIO_Pin_0, (BitAction)(1 - GPIO_ReadOutputDataBit(GPIOB, GPIO_Pin_0)));//运行灯
-    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+////    highvolage_adjust(voltage_target);
+//    timer_timeout++;
+////    GPIO_WriteBit(GPIOB, GPIO_Pin_0, (BitAction)(1 - GPIO_ReadOutputDataBit(GPIOB, GPIO_Pin_0)));//运行灯
+//    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
 }
 /*******************************************************************************
 * Function Name  : TIM3_IRQHandler

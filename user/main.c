@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "textcmd.h"
 #include "ad5245.h"
+#include "stm32f10x_rcc.h"
 
 #ifdef __GNUC__
     #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
@@ -20,46 +21,19 @@ vu16 AD_Value[4];
 vu16 timer_timeout;
 float voltage_feedback, voltage_target = 1600, gain=10, temperature;
 float pwm_freq, pwm_duty;
+		
+RCC_ClocksTypeDef ClockInfo;
 
 float pas_maxvalue_buf[10];
 u8 pas_maxvalue_cnt;
 
 void TIM_Configuration(void);
-void pwm_config(unsigned short arr, unsigned short psc);
+void Tim3_pwm_config(unsigned short arr, unsigned short psc);
 void adc1_init(void);
 void delay_ms(u16 cnt);
 void highvolage_adjust(u16 volt);
 void PAS_buf(void);
 
-int main(void)
-{
-    RCC_Configuration();
-    NVIC_Configuration();
-    USART_Configuration();
-    GPIO_Configuration();
-//    TIM_Configuration();
-    pwm_config(19999, 3599); //PWM频率 36000/(999+1)=36 kHz 不分频
-    TIM_SetCompare2(TIM3, 0);
-    TIM_SetCompare3(TIM3, 999);
-    TIM_SetCompare4(TIM3, 99);
-    printf("this is a test!\r\n");
-    ad5245_init();
-    adc1_init();
-    
-    TIM_Configuration();
-//    delay_ms(1000);
-//    TIM_SetCompare2(TIM3,30);
-    while (1)
-    {
-//        PAS_buf();
-//        ADC_Read();
-        delay_ms(1);
-//        highvolage_adjust(voltage_target);
-        printf("%ld 个,%.1f 伏特,%.1f 摄氏度  ", PAS_counter, voltage_feedback, temperature);
-        printf("%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f\r\n",pas_maxvalue_buf[0],pas_maxvalue_buf[1],pas_maxvalue_buf[2],pas_maxvalue_buf[3],pas_maxvalue_buf[4],pas_maxvalue_buf[5],pas_maxvalue_buf[6],pas_maxvalue_buf[7],pas_maxvalue_buf[8],pas_maxvalue_buf[9]);
-        if (termination_flag == 1)text_cmd();
-    }
-}
 void RCC_Configuration(void)
 {
 //    ErrorStatus HSEStartUpStatus;
@@ -110,10 +84,10 @@ void RCC_Configuration(void)
     {}
 //    }
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
-                           RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2 | RCC_APB1Periph_USART3, ENABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM4, ENABLE);
+//    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
+//                           RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
+//    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2 | RCC_APB1Periph_USART3, ENABLE);
+//    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM4, ENABLE);
 }
 void NVIC_Configuration(void)
 {
@@ -170,11 +144,11 @@ void NVIC_Configuration(void)
 //    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 //    NVIC_Init(&NVIC_InitStructure);
 
-    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQChannel;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+//    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQChannel;
+//    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+//    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+//    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+//    NVIC_Init(&NVIC_InitStructure);
 
 //    NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQChannel;
 //    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
@@ -182,11 +156,11 @@ void NVIC_Configuration(void)
 //    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 //    NVIC_Init(&NVIC_InitStructure);
 
-    NVIC_InitStructure.NVIC_IRQChannel = TIM4_IRQChannel;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+//    NVIC_InitStructure.NVIC_IRQChannel = TIM4_IRQChannel;
+//    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+//    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+//    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+//    NVIC_Init(&NVIC_InitStructure);
 }
 
 
@@ -249,8 +223,7 @@ void GPIO_Configuration(void)
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
     GPIO_ResetBits(GPIOA, GPIO_Pin_8); //脉冲指示灯
-	
-		
+
 
 //    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
 //    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -349,21 +322,23 @@ void USART_Configuration(void)
 //    USART_GetFlagStatus(UART4, USART_FLAG_TC);
 }
 
-void pwm_config(unsigned short arr, unsigned short psc)
+void Tim3_pwm_config(unsigned short arr, unsigned short psc)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_OCInitTypeDef TIM_OCInitStructure;
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB , ENABLE);
-
-//    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7; //TIM3_CH2
+//		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_AFIO,ENABLE);
+//		
+//		GPIO_PinRemapConfig(GPIO_FullRemap_TIM3,ENABLE);
+//    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8; //TIM3_CH3 TIM2_CH3
 //    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 //    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-//    GPIO_Init(GPIOA, &GPIO_InitStructure);
-    
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; //TIM3_CH3 TIM3_CH4
+//    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB , ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; //TIM3_CH3 TIM2_CH3
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -374,25 +349,171 @@ void pwm_config(unsigned short arr, unsigned short psc)
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = 0;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-    TIM_OC2Init(TIM3, &TIM_OCInitStructure);
-    TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
-    
-
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = 0;
+    TIM_OCInitStructure.TIM_Pulse = 4999;
     TIM_OC3Init(TIM3, &TIM_OCInitStructure);
     TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = 0;
-    TIM_OC4Init(TIM3, &TIM_OCInitStructure);
-    TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Enable);
-
-//    TIM_CtrlPWMOutputs(TIM3,ENABLE);
     TIM_ARRPreloadConfig(TIM3, ENABLE);
     TIM_Cmd(TIM3, ENABLE);
+}
+
+//void Tim2_pwm_config(unsigned short arr, unsigned short psc)
+//{
+//    GPIO_InitTypeDef GPIO_InitStructure;
+//    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+//    TIM_OCInitTypeDef TIM_OCInitStructure;
+//		
+//		
+//    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+//    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|RCC_APB2Periph_AFIO, ENABLE);
+//		
+////    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10|GPIO_Pin_11; //TIM2_CH3
+////    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+////    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+////    GPIO_Init(GPIOB, &GPIO_InitStructure);
+////		GPIO_PinRemapConfig(GPIO_PartialRemap2_TIM2,ENABLE);
+//	  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; //TIM2_CH3
+//    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+//    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//    GPIO_Init(GPIOA, &GPIO_InitStructure);
+//	
+//    TIM_TimeBaseStructure.TIM_Period = arr;
+//    TIM_TimeBaseStructure.TIM_Prescaler = psc;
+//    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+//    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+//    TIM_TimeBaseInit(TIM5, &TIM_TimeBaseStructure);
+//    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+//    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+//    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+//    TIM_OCInitStructure.TIM_Pulse = 2999;
+//    TIM_OC3Init(TIM5, &TIM_OCInitStructure);
+//    TIM_OC3PreloadConfig(TIM5, TIM_OCPreload_Enable);
+//    TIM_ARRPreloadConfig(TIM5, ENABLE);
+//    TIM_Cmd(TIM5, ENABLE);
+//		
+////		TIM_OCInitTypeDef TIM_OCInitStructure;
+////		TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
+////		GPIO_InitTypeDef GPIO_InitStructrue;
+////		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_AFIO,ENABLE);
+////		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
+
+////		GPIO_InitStructrue.GPIO_Mode=GPIO_Mode_AF_PP;
+////		GPIO_InitStructrue.GPIO_Pin=GPIO_Pin_10;
+////		GPIO_InitStructrue.GPIO_Speed=GPIO_Speed_50MHz;
+////		GPIO_Init(GPIOB,&GPIO_InitStructrue);
+////		GPIO_PinRemapConfig(GPIO_FullRemap_TIM2,ENABLE);
+
+////		TIM_TimeBaseInitStructure.TIM_ClockDivision=TIM_CKD_DIV1;
+////		TIM_TimeBaseInitStructure.TIM_CounterMode=TIM_CounterMode_Up;
+////		TIM_TimeBaseInitStructure.TIM_Period=arr;
+////		TIM_TimeBaseInitStructure.TIM_Prescaler=psc;
+////		TIM_TimeBaseInit(TIM2,&TIM_TimeBaseInitStructure);
+
+////		TIM_OCInitStructure.TIM_Pulse=2999;
+////		TIM_OCInitStructure.TIM_OCMode=TIM_OCMode_PWM2;
+////		TIM_OCInitStructure.TIM_OCPolarity=TIM_OCPolarity_High;
+////		TIM_OCInitStructure.TIM_OutputState=TIM_OutputState_Enable;
+////		TIM_OC3Init(TIM2,&TIM_OCInitStructure);
+
+////		TIM_OC3PreloadConfig(TIM2,TIM_OCPreload_Enable);
+////		TIM_ARRPreloadConfig(TIM2, ENABLE); 
+////		TIM_Cmd(TIM2,ENABLE);
+//}
+void Tim2_pwm_config(u16 arr,u16 psc)
+{  
+	
+//	 GPIO_InitTypeDef  GPIO_InitStructure;
+//		
+//	 RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);	 //使能PB,PE端口时钟
+//		
+//	 GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;				 //LED0-->PB.5 端口配置
+//	 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
+//	 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 //IO口速度为50MHz
+//	 GPIO_Init(GPIOB, &GPIO_InitStructure);					 //根据设定参数初始化GPIOB.5
+//	 GPIO_SetBits(GPIOB,GPIO_Pin_10);						 //PB.5 输出高
+//	 GPIO_InitTypeDef  GPIO_InitStructure;
+//		
+//	 RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);	 //使能PB,PE端口时钟
+//		
+//	 GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;				 //LED0-->PB.5 端口配置
+//	 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
+//	 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 //IO口速度为50MHz
+//	 GPIO_Init(GPIOA, &GPIO_InitStructure);					 //根据设定参数初始化GPIOB.5
+//	 GPIO_SetBits(GPIOA,GPIO_Pin_2);						 //PB.5 输出高
+	
+    GPIO_InitTypeDef GPIO_InitStructure;
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+    TIM_OCInitTypeDef TIM_OCInitStructure;
+
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_AFIO,ENABLE);
+		
+		GPIO_PinRemapConfig(GPIO_PartialRemap2_TIM2,ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10; //TIM3_CH3 TIM2_CH3
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    TIM_TimeBaseStructure.TIM_Period = arr;
+    TIM_TimeBaseStructure.TIM_Prescaler = psc;
+    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_Pulse = 1999;
+    TIM_OC3Init(TIM2, &TIM_OCInitStructure);
+    TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable);
+    TIM_ARRPreloadConfig(TIM2, ENABLE);
+    TIM_Cmd(TIM2, ENABLE);
+	
+	
+//	GPIO_InitTypeDef GPIO_InitStructure;
+//	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+//	TIM_OCInitTypeDef  TIM_OCInitStructure;
+//	
+
+//	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+//// 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA , ENABLE);  //使能GPIO外设和AFIO复用功能模块时钟使能
+//	
+//	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
+//	GPIO_PinRemapConfig(GPIO_PartialRemap2_TIM2, ENABLE); //Timer3部分重映射  TIM3_CH2->PB5                                                                       	 //用于TIM3的CH2输出的PWM通过该LED显示
+// 
+//   //设置该引脚为复用输出功能,输出TIM3 CH2的PWM脉冲波形
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10; //TIM_CH2
+//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;  //复用推挽输出
+//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//	GPIO_Init(GPIOB, &GPIO_InitStructure);
+//	GPIO_SetBits(GPIOB, GPIO_Pin_10); // PA7上拉	
+	
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; //TIM_CH2
+//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;  //复用推挽输出
+//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//	GPIO_Init(GPIOA, &GPIO_InitStructure);
+//	GPIO_SetBits(GPIOA, GPIO_Pin_2); // PA7上拉	
+
+//	TIM_TimeBaseStructure.TIM_Period = arr; //设置在下一个更新事件装入活动的自动重装载寄存器周期的值	 80K
+//	TIM_TimeBaseStructure.TIM_Prescaler =psc; //设置用来作为TIMx时钟频率除数的预分频值  不分频
+//	TIM_TimeBaseStructure.TIM_ClockDivision = 0; //设置时钟分割:TDTS = Tck_tim
+//	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;  //TIM向上计数模式
+//	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure); //根据TIM_TimeBaseInitStruct中指定的参数初始化TIMx的时间基数单位
+//	
+//	 
+//	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2; //选择定时器模式:TIM脉冲宽度调制模式2
+//	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable; //比较输出使能
+//	TIM_OCInitStructure.TIM_Pulse = 2999; //设置待装入捕获比较寄存器的脉冲值
+//	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High; //输出极性:TIM输出比较极性高
+//	TIM_OC2Init(TIM2, &TIM_OCInitStructure);  //根据TIM_OCInitStruct中指定的参数初始化外设TIMx
+//	TIM_OC2PreloadConfig(TIM2, TIM_OCPreload_Enable);  //使能TIMx在CCR2上的预装载寄存器
+//	
+//	TIM_ARRPreloadConfig(TIM2, ENABLE); //使能TIMx在ARR上的预装载寄存器
+//	
+// 
+//	TIM_Cmd(TIM2, ENABLE);  //使能TIMx外设
+ 
+
 }
 void adc1_init(void)
 {
@@ -620,3 +741,38 @@ PUTCHAR_PROTOTYPE
     return ch;
 }
 /******************* (C) COPYRIGHT 2010 CETC27 *****END OF FILE****/
+
+int main(void)
+{
+    RCC_Configuration();
+//    NVIC_Configuration();
+//    USART_Configuration();
+//    GPIO_Configuration();
+//    TIM_Configuration();
+    Tim3_pwm_config(9999, 3599); //PWM频率 36000/(999+1)=36 kHz 不分频, 19999和3599的参数，表明了pwm波形2s翻转一次
+		Tim2_pwm_config(9999, 3599);
+//    TIM_SetCompare2(TIM3, 0);
+//    TIM_SetCompare3(TIM3, 4999);//999
+//		TIM_SetCompare3(TIM5, 4999);//999
+//    TIM_SetCompare4(TIM3, 99);
+//    printf("this is a test!\r\n");
+//    ad5245_init();
+//    adc1_init();
+	
+//    RCC_GetClocksFreq(&ClockInfo);
+	
+//    TIM_Configuration();TODO by myself
+//    delay_ms(1000);
+//    TIM_SetCompare2(TIM3,30);
+    while (1)
+    {
+////        PAS_buf();
+////        ADC_Read();
+//        delay_ms(1);
+////        highvolage_adjust(voltage_target);
+//        printf("%ld 个,%.1f 伏特,%.1f 摄氏度  ", PAS_counter, voltage_feedback, temperature);
+//        printf("%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f\r\n",pas_maxvalue_buf[0],pas_maxvalue_buf[1],pas_maxvalue_buf[2],pas_maxvalue_buf[3],pas_maxvalue_buf[4],pas_maxvalue_buf[5],pas_maxvalue_buf[6],pas_maxvalue_buf[7],pas_maxvalue_buf[8],pas_maxvalue_buf[9]);
+//        if (termination_flag == 1)text_cmd();
+    }
+}
+

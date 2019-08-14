@@ -25,7 +25,7 @@ extern float gain;
 extern u8 PAS_down, PAS_up;
 vu8 termination_flag;
 u16 resistance;
-extern void pwm_config(unsigned short arr, unsigned short psc);
+extern void Tim3_pwm_config(unsigned short arr, unsigned short psc);
 
 char *str_upr(char *s1)
 {
@@ -80,7 +80,7 @@ void text_parse(char *s1)
                     pwm_duty = atof(PT);
                     if (pwm_freq >= 1 && pwm_duty >= 0)
                     {
-                        pwm_config(999, 36000 / pwm_freq - 1); //PWMÆµÂÊ 36000/(999+1)=36 kHz
+                        Tim3_pwm_config(999, 36000 / pwm_freq - 1); //PWMÆµÂÊ 36000/(999+1)=36 kHz
                         TIM_SetCompare2(TIM3, pwm_duty * 10);
                         printf("<T>\r\n");
                     }
