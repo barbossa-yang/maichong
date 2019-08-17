@@ -19,8 +19,11 @@ u32 PAS_value[128], PAS_counter;
 u8 PAS_down = 4, PAS_up = 126;
 vu16 AD_Value[4];
 		
-float ADC_ConvertedValueLocal;
 volatile u16 ADC_ConvertedValue;
+float ADC_ConvertedValueLocal;
+float g_adcTotalValue = 0;
+float g_adcAverageValue = 0;
+float g_adcOldAverageValue = 0;
 		
 vu16 timer_timeout;
 float voltage_feedback, voltage_target = 1600, gain=10, temperature;
@@ -327,6 +330,35 @@ void USART_Configuration(void)
 //    USART_GetFlagStatus(UART4, USART_FLAG_TC);
 }
 
+void USART1_Config(void)
+{
+		GPIO_InitTypeDef GPIO_InitStructure;
+		USART_InitTypeDef USART_InitStructure;
+		
+		/* config USART1 clock */
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
+		
+		/* USART1 GPIO config */
+		/* Configure USART1 Tx (PA.09) as alternate function push-pull */
+		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+		GPIO_Init(GPIOA, &GPIO_InitStructure);    
+		/* Configure USART1 Rx (PA.10) as input floating */
+		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+		GPIO_Init(GPIOA, &GPIO_InitStructure);
+			
+		/* USART1 mode config */
+		USART_InitStructure.USART_BaudRate = 115200;
+		USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+		USART_InitStructure.USART_StopBits = USART_StopBits_1;
+		USART_InitStructure.USART_Parity = USART_Parity_No ;
+		USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+		USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+		USART_Init(USART1, &USART_InitStructure); 
+		USART_Cmd(USART1, ENABLE);
+}
 void Tim3_pwm_config(unsigned short arr, unsigned short psc)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -462,7 +494,7 @@ void delay_ms(u16 cnt)
     u16 i;
     while (cnt--)
     {
-        for (i = 0; i < 36000; i++)
+        for (i = 0; i < 3600; i++)
         {
             __nop();
         }
@@ -592,33 +624,90 @@ void PAS_buf(void)
   * @param  None
   * @retval None
 ****************************************************************/
-PUTCHAR_PROTOTYPE
+
+int fputc(int ch, FILE *f)
 {
-    /* Place your implementation of fputc here */
-    /* e.g. write a character to the USART */
-    USART_SendData(USART2, (char) ch);
-
-    /* Loop until the end of transmission */
-    while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
-    {
-        IWDG_ReloadCounter();
-    }
-
-    return ch;
+		/* 发送一个字节数据到USART1 */
+		USART_SendData(USART1, (u8) ch);
+		
+		/* 等待发送完毕 */
+		while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);		
+	
+		return (ch);
 }
 /******************* (C) COPYRIGHT 2010 CETC27 *****END OF FILE****/
 
+void WaitForAdcDown(void)
+{
+			GPIO_ResetBits(GPIOC, GPIO_Pin_5);
+			TIM_SetCompare3(TIM3, 0);
+			delay_ms(1000);
+			GPIO_SetBits(GPIOC, GPIO_Pin_5);
+			delay_ms(10);
+}
+void AdjustVoltage(u16 voltage)
+{
+			u16 percent = 0;
+			u16 temp = 0;
+			u16 temp1 = 0;
+			WaitForAdcDown();
+			for(percent = 0; percent < 1000; percent+=10)
+			{
+				TIM_SetCompare3(TIM3, percent);//999
+				delay_ms(30);
+				for (temp = 0; temp < 10; temp++)
+				{
+						ADC_ConvertedValueLocal +=(float) ADC_ConvertedValue/4096*3.3; // 读取转换的AD值
+						delay_ms(2);
+				}
+				g_adcAverageValue = ADC_ConvertedValueLocal/10;			
+				ADC_ConvertedValueLocal = 0;
+				
+				if (percent >= 990)
+				{
+						GPIO_ResetBits(GPIOC, GPIO_Pin_5);
+						TIM_SetCompare3(TIM3, 0);
+						delay_ms(5000);
+						GPIO_SetBits(GPIOC, GPIO_Pin_5);
+						delay_ms(100);
+				}
+					
+					if (((g_adcAverageValue * 1001) > (voltage - 150))&&(g_adcAverageValue * 1001 <= voltage))
+					{
+							g_adcOldAverageValue = 0;
+							do{
+									percent++;
+									TIM_SetCompare3(TIM3, percent);//999
+									delay_ms(10);
+									for (temp1 = 0; temp1 < 10; temp1++)
+									{
+											ADC_ConvertedValueLocal +=(float) ADC_ConvertedValue/4096*3.3; // 读取转换的AD值
+											delay_ms(1);
+									}
+									g_adcAverageValue = ADC_ConvertedValueLocal/10;
+									printf("%d %f \r\n", percent, g_adcAverageValue*1001);
+									ADC_ConvertedValueLocal = 0;
+									if (abs(voltage - g_adcAverageValue * 1001) <= 3)
+									{
+										break;
+									}
+							}while((g_adcAverageValue * 1001) <= (voltage +20));
+							break;
+					}
+			}
+}
 int main(void)
 {
     RCC_Configuration();
     NVIC_Configuration();
-//    USART_Configuration();
+    USART1_Config();
     GPIO_Configuration();
 //    TIM_Configuration();
     Tim3_pwm_config(999, 0); //PWM频率 36000/(999+1)=36 kHz 不分频, 19999和3599的参数，表明了pwm波形2s翻转一次
 		Tim2_pwm_config(9999, 4999);
 //    TIM_SetCompare2(TIM3, 0);
-    TIM_SetCompare3(TIM3, 199);//999
+
+//    TIM_SetCompare3(TIM3, 29);//999
 		TIM_SetCompare3(TIM2, 2999);//999
 //    TIM_SetCompare4(TIM3, 99);
 //    printf("this is a test!\r\n");
@@ -631,8 +720,15 @@ int main(void)
 //    delay_ms(1000);
 //    TIM_SetCompare2(TIM3,30);
     while (1)
-    {
-			ADC_ConvertedValueLocal =(float) ADC_ConvertedValue/4096*3.3; // 读取转换的AD值
+		{
+
+			AdjustVoltage(800);
+			printf("数据趋向所需值11111_______________________%f \r\n", g_adcAverageValue*1001);
+			delay_ms(5000);
+			AdjustVoltage(2600);
+			printf("数据趋向所需值_______________________%f \r\n", g_adcAverageValue*1001);
+			delay_ms(5000);
+//			
 ////        PAS_buf();
 ////        ADC_Read();
 //        delay_ms(1);
@@ -642,4 +738,8 @@ int main(void)
 //        if (termination_flag == 1)text_cmd();
     }
 }
+
+
+
+
 
