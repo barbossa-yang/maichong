@@ -636,7 +636,6 @@ int fputc(int ch, FILE *f)
 		return (ch);
 }
 /******************* (C) COPYRIGHT 2010 CETC27 *****END OF FILE****/
-
 void WaitForAdcDown(void)
 {
 			GPIO_ResetBits(GPIOC, GPIO_Pin_5);
@@ -645,6 +644,7 @@ void WaitForAdcDown(void)
 			GPIO_SetBits(GPIOC, GPIO_Pin_5);
 			delay_ms(10);
 }
+
 void AdjustVoltage(u16 voltage)
 {
 			u16 percent = 0;
@@ -696,6 +696,47 @@ void AdjustVoltage(u16 voltage)
 					}
 			}
 }
+
+void TestPwmAndInputVoltage(void)
+{
+			u16 percent = 0;
+			u16 temp = 0;
+			for(percent = 0; percent < 1000; percent++)
+			{
+				TIM_SetCompare3(TIM3, percent);//999
+				delay_ms(50);
+				for (temp = 0; temp < 50; temp++)
+				{
+						ADC_ConvertedValueLocal +=(float) ADC_ConvertedValue/4096*3.3; // 读取转换的AD值
+						delay_ms(1);
+				}
+				g_adcAverageValue = ADC_ConvertedValueLocal/50;	
+				
+				if (percent == 10)
+				{
+						printf("%d  %f \r\n", percent, g_adcAverageValue*1001);
+				}
+				else if (percent == 990)
+				{
+						printf("%d  %f \r\n", percent, g_adcAverageValue*1001);
+				}
+				else 
+				{
+						printf("%f\r\n",g_adcAverageValue*1001);
+				}
+				
+				ADC_ConvertedValueLocal = 0;
+				if (percent >= 990)
+				{
+						GPIO_ResetBits(GPIOC, GPIO_Pin_5);
+						TIM_SetCompare3(TIM3, 0);
+						delay_ms(5000);
+						GPIO_SetBits(GPIOC, GPIO_Pin_5);
+						delay_ms(100);
+				}
+			}
+}
+
 int main(void)
 {
     RCC_Configuration();
@@ -721,13 +762,16 @@ int main(void)
 //    TIM_SetCompare2(TIM3,30);
     while (1)
 		{
-
-			AdjustVoltage(800);
-			printf("数据趋向所需值11111_______________________%f \r\n", g_adcAverageValue*1001);
+				WaitForAdcDown();
 			delay_ms(5000);
-			AdjustVoltage(2600);
-			printf("数据趋向所需值_______________________%f \r\n", g_adcAverageValue*1001);
-			delay_ms(5000);
+				TestPwmAndInputVoltage();
+				delay_ms(5000);
+//			AdjustVoltage(800);
+//			printf("数据趋向所需值11111_______________________%f \r\n", g_adcAverageValue*1001);
+//			delay_ms(5000);
+//			AdjustVoltage(2600);
+//			printf("数据趋向所需值_______________________%f \r\n", g_adcAverageValue*1001);
+//			delay_ms(5000);
 //			
 ////        PAS_buf();
 ////        ADC_Read();
