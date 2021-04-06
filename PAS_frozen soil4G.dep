@@ -1,6 +1,6 @@
 Dependencies for Project 'PAS', Target 'frozen soil4G': (DO NOT MODIFY !)
 F (.\startcode\STM32F10x.s)(0x5D4408F6)(--cpu Cortex-M3 -g --apcs=interwork --pd "__MICROLIB SETA 1"-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x--list .\output\stm32f10x.lst --xref -o .\output\stm32f10x.o --depend .\output\stm32f10x.d)
-F (.\user\main.c)(0x5D4D3A47)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\main.o --omf_browse .\output\main.crf --depend .\output\main.d)
+F (.\user\main.c)(0x5DAD1095)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\main.o --omf_browse .\output\main.crf --depend .\output\main.d)
 I (user\main.h)(0x5D44129C)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_lib.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_map.h)(0x5D4414BA)
@@ -34,7 +34,7 @@ I (C:\Keil\ARM\ARMCC\include\stdio.h)(0x51C7C554)
 I (C:\Keil\ARM\ARMCC\include\stdlib.h)(0x51C7C554)
 I (.\driver\textcmd.h)(0x5D4408F6)
 I (.\driver\ad5245.h)(0x5D4408F6)
-F (.\user\stm32f10x_it.c)(0x5D4413C7)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\stm32f10x_it.o --omf_browse .\output\stm32f10x_it.crf --depend .\output\stm32f10x_it.d)
+F (.\user\stm32f10x_it.c)(0x5D520BCA)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\stm32f10x_it.o --omf_browse .\output\stm32f10x_it.crf --depend .\output\stm32f10x_it.d)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_it.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_lib.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_map.h)(0x5D4414BA)
@@ -65,7 +65,7 @@ I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_tim.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_usart.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_wwdg.h)(0x5D4414BA)
 I (.\driver\textcmd.h)(0x5D4408F6)
-F (.\driver\textcmd.c)(0x5D4408F6)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\textcmd.o --omf_browse .\output\textcmd.crf --depend .\output\textcmd.d)
+F (.\driver\textcmd.c)(0x5D5142DC)(-c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork -I.\user -I.\driver -I.\startcode-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F10x-o .\output\textcmd.o --omf_browse .\output\textcmd.crf --depend .\output\textcmd.d)
 I (driver\textcmd.h)(0x5D4408F6)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_lib.h)(0x5D4414BA)
 I (C:\Keil\ARM\Inc\ST\STM32F10x\stm32f10x_map.h)(0x5D4414BA)
